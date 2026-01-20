@@ -65,6 +65,7 @@ type TaskStatus string
 
 const (
     StatusPending TaskStatus = "pending"
+    StatusQueued  TaskStatus = "queued"
     StatusDoing   TaskStatus = "doing"
     StatusDone    TaskStatus = "done"
     StatusFailed  TaskStatus = "failed"
@@ -315,15 +316,18 @@ func (s *SyncEngine) UpdateParentStatuses()
 │   │   ├── 1.1.create_structure.md       # Leaf task (file)
 │   │   └── 1.2.configure_build.md        # Leaf task (file)
 │   └── 2.implement_feature.md            # Leaf task (file)
+├── queued/
+│   ├── index.md                          # List of queued tasks
+│   └── 3.queued_task.md
 ├── doing/
 │   ├── index.md
-│   └── 3.write_tests.md
+│   └── 4.write_tests.md
 ├── done/
 │   ├── index.md
-│   └── 4.initial_setup.md
+│   └── 5.initial_setup.md
 └── failed/
     ├── index.md
-    └── 5.broken_feature.md
+    └── 6.broken_feature.md
 ```
 
 ### Checkbox Syntax Mapping
@@ -331,9 +335,10 @@ func (s *SyncEngine) UpdateParentStatuses()
 | Status  | Checkbox | Example |
 |---------|----------|---------|
 | Pending | `- [ ]`  | `- [ ] 1.1 Create structure` |
-| Doing   | `- [-]`  | `- [-] 1.2 Configure build` |
-| Done    | `- [x]`  | `- [x] 1.3 Setup complete` |
-| Failed  | `- [!]`  | `- [!] 1.4 Broken feature` |
+| Queued  | `- [~]`  | `- [~] 1.2 Queued for execution` |
+| Doing   | `- [-]`  | `- [-] 1.3 Configure build` |
+| Done    | `- [x]`  | `- [x] 1.4 Setup complete` |
+| Failed  | `- [!]`  | `- [!] 1.5 Broken feature` |
 
 ### State Transition Diagram
 
@@ -341,7 +346,11 @@ func (s *SyncEngine) UpdateParentStatuses()
 stateDiagram-v2
     [*] --> pending: Task Created
 
+    pending --> queued: queue (mv)
     pending --> doing: claim (mv)
+
+    queued --> doing: claim (mv)
+    queued --> pending: unqueue (mv)
 
     doing --> done: complete (mv)
     doing --> pending: unclaim (mv)
@@ -365,7 +374,9 @@ flowchart TD
     D -->|Yes| E[Parent = failed]
     D -->|No| F{Any child in pending?}
     F -->|Yes| G[Parent = pending]
-    F -->|No| H[Parent = done]
+    F -->|No| H{Any child in queued?}
+    H -->|Yes| I[Parent = queued]
+    H -->|No| J[Parent = done]
 ```
 
 ## Concrete Examples
@@ -627,9 +638,10 @@ Some intro text              → preamble
 **Checkbox Pattern Matching:**
 ```
 - [ ] 1.1 Task title    →  VALID TASK: status=pending, id="1.1", title="Task title"
+- [~] 1.2 Queued task   →  VALID TASK: status=queued, id="1.2", title="Queued task"
 - [-] 2.1 Another task  →  VALID TASK: status=doing, id="2.1", title="Another task"
 - [x] 10.5.2 Deep task  →  VALID TASK: status=done, id="10.5.2", title="Deep task"
-- [!] 1.2 Failed task   →  VALID TASK: status=failed, id="1.2", title="Failed task"
+- [!] 1.3 Failed task   →  VALID TASK: status=failed, id="1.3", title="Failed task"
 - [x] Done task         →  NO-ID: preserved as non-task content (not a task)
 - [!] Failed task       →  NO-ID: preserved as non-task content (not a task)
 - [ ] No number here    →  NO-ID: preserved as non-task content (not a task)
@@ -732,10 +744,11 @@ func (ig *IndexGenerator) GenerateRootIndex() string {
     counts := ig.getStatusCounts()
     return fmt.Sprintf("# Task Overview\n\n"+
         "- pending/: %d tasks\n"+
+        "- queued/: %d tasks\n"+
         "- doing/: %d tasks\n"+
         "- done/: %d tasks\n"+
         "- failed/: %d tasks\n",
-        counts[StatusPending], counts[StatusDoing], counts[StatusDone], counts[StatusFailed])
+        counts[StatusPending], counts[StatusQueued], counts[StatusDoing], counts[StatusDone], counts[StatusFailed])
 }
 
 // GenerateStatusIndex generates a status directory index.md content
@@ -788,6 +801,7 @@ func (ig *IndexGenerator) GenerateTaskFileContent(task *Task) string {
 func (ig *IndexGenerator) getStatusEmoji(status TaskStatus) string {
     switch status {
     case StatusPending: return "⬜"
+    case StatusQueued:  return "🔜"
     case StatusDoing:   return "🔄"
     case StatusDone:    return "✅"
     case StatusFailed:  return "❌"
@@ -952,7 +966,7 @@ Output (text format):
 
 ### Property 2: Checkbox Status Mapping
 
-*For any* task line with a valid checkbox syntax (`- [ ]`, `- [-]`, `- [x]`, `- [!]`), the Tasks_MD_Parser SHALL map it to the corresponding status (pending, doing, done, failed respectively).
+*For any* task line with a valid checkbox syntax (`- [ ]`, `- [~]`, `- [-]`, `- [x]`, `- [!]`), the Tasks_MD_Parser SHALL map it to the corresponding status (pending, queued, doing, done, failed respectively).
 
 **Validates: Requirements 1.1, 1.2, 1.3, 1.4**
 
@@ -964,9 +978,9 @@ Output (text format):
 
 ### Property 4: Status Directory Placement
 
-*For any* task with a given status, the FUSE_Filesystem SHALL expose it within the corresponding status directory (`pending/`, `doing/`, `done/`, or `failed/`).
+*For any* task with a given status, the FUSE_Filesystem SHALL expose it within the corresponding status directory (`pending/`, `queued/`, `doing/`, `done/`, or `failed/`).
 
-**Validates: Requirements 2.5, 2.6, 2.7, 2.8**
+**Validates: Requirements 2.5, 2.6, 2.7, 2.8, 2.9**
 
 ### Property 5: Filename Generation Consistency
 
@@ -1000,7 +1014,7 @@ Output (text format):
 
 ### Property 10: Parent Status Derivation
 
-*For any* parent task, its status SHALL be derived from its children following the precedence: doing (if any child is doing) > failed (if any child is failed) > pending (if any child is pending) > done (if all children are done).
+*For any* parent task, its status SHALL be derived from its children following the precedence: doing (if any child is doing) > failed (if any child is failed) > pending (if any child is pending) > queued (if any child is queued) > done (if all children are done).
 
 **Validates: Requirements 4.7**
 
@@ -1012,7 +1026,7 @@ Output (text format):
 
 ### Property 12: Status Transition Enforcement
 
-*For any* leaf task, only the valid transitions (pending→doing, doing→done/pending/failed, done→doing, failed→pending/doing) SHALL succeed. All other transitions SHALL return EPERM. Parent task directories SHALL always return EPERM on move attempts.
+*For any* leaf task, only the valid transitions (pending→queued/doing, queued→doing/pending, doing→done/pending/failed, done→doing, failed→pending/doing) SHALL succeed. All other transitions SHALL return EPERM. Parent task directories SHALL always return EPERM on move attempts.
 
 **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
 

@@ -11,7 +11,7 @@ This document specifies the requirements for a FUSE-based task manager filesyste
 - **Leaf_Task**: A task that has no sub-tasks and is represented as a file in the filesystem
 - **Task_Directory**: A virtual directory representing a parent task that contains sub-tasks
 - **Parent_Task**: A task that contains one or more sub-tasks and is represented as a directory
-- **Status_Directory**: A top-level directory representing a task status (pending, doing, done, failed)
+- **Status_Directory**: A top-level directory representing a task status (pending, queued, doing, done, failed)
 - **Index_File**: A read-only `index.md` file in each directory listing all tasks and their descriptions
 - **Tasks_MD_Parser**: Component that parses the tasks.md markdown format into task objects
 - **Pretty_Printer**: Component that serializes task objects back to markdown format
@@ -99,9 +99,10 @@ This task involves creating the markdown parser.
 #### Acceptance Criteria
 
 1. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [ ]` as pending status
-2. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [-]` as doing status
-3. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [x]` as done status
-4. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [!]` as failed status
+2. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [~]` as queued status
+3. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [-]` as doing status
+4. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [x]` as done status
+5. WHEN a tasks.md file is loaded, THE Tasks_MD_Parser SHALL parse markdown checkbox syntax `- [!]` as failed status
 5. WHEN a task line contains a numeric identifier (e.g., `1.1`, `2.3.1`), THE Tasks_MD_Parser SHALL extract it as the task ID
 6. WHEN a task line has checkbox syntax but lacks a numeric identifier, THE Tasks_MD_Parser SHALL ignore it (not parse it as a task)
 7. WHEN a task has nested sub-tasks based on indentation, THE Tasks_MD_Parser SHALL build a hierarchical tree structure
@@ -117,17 +118,18 @@ This task involves creating the markdown parser.
 
 #### Acceptance Criteria
 
-1. WHEN the FUSE_Filesystem mounts, THE FUSE_Filesystem SHALL create status directories: `pending/`, `doing/`, `done/`, `failed/`
+1. WHEN the FUSE_Filesystem mounts, THE FUSE_Filesystem SHALL create status directories: `pending/`, `queued/`, `doing/`, `done/`, `failed/`
 2. WHEN a task has no sub-tasks (leaf task), THE FUSE_Filesystem SHALL expose it as a file
 3. WHEN a task has sub-tasks (parent task), THE FUSE_Filesystem SHALL expose it as a directory containing its sub-tasks
 4. THE FUSE_Filesystem SHALL preserve the hierarchical nesting of tasks (e.g., task `1.2.3` appears as `pending/1.parent/1.2.child/1.2.3.leaf.md`)
 5. WHEN a task has pending status, THE FUSE_Filesystem SHALL place it in the `pending/` directory
-6. WHEN a task has doing status, THE FUSE_Filesystem SHALL place it in the `doing/` directory
-7. WHEN a task has done status, THE FUSE_Filesystem SHALL place it in the `done/` directory
-8. WHEN a task has failed status, THE FUSE_Filesystem SHALL place it in the `failed/` directory
-9. WHEN reading a task file, THE FUSE_Filesystem SHALL return the task content formatted according to the Task File Content Format specification
-10. THE FUSE_Filesystem SHALL generate filenames according to the Filename Slugification Rules specification
-11. THE FUSE_Filesystem SHALL maintain an internal mapping between filenames and their corresponding task entries in tasks.md
+6. WHEN a task has queued status, THE FUSE_Filesystem SHALL place it in the `queued/` directory
+7. WHEN a task has doing status, THE FUSE_Filesystem SHALL place it in the `doing/` directory
+8. WHEN a task has done status, THE FUSE_Filesystem SHALL place it in the `done/` directory
+9. WHEN a task has failed status, THE FUSE_Filesystem SHALL place it in the `failed/` directory
+10. WHEN reading a task file, THE FUSE_Filesystem SHALL return the task content formatted according to the Task File Content Format specification
+11. THE FUSE_Filesystem SHALL generate filenames according to the Filename Slugification Rules specification
+12. THE FUSE_Filesystem SHALL maintain an internal mapping between filenames and their corresponding task entries in tasks.md
 
 ### Requirement 3: Read-Only Task Files with Index
 
@@ -161,6 +163,7 @@ This task involves creating the markdown parser.
     - `doing/`: If **any** child task is in `doing/`.
     - `failed/`: If **no** child tasks are in `doing/` and **at least one** child task is in `failed/`.
     - `pending/`: If **no** child tasks are in `doing/` or `failed/`, and **at least one** child task is in `pending/`.
+    - `queued/`: If **no** child tasks are in `doing/`, `failed/`, or `pending/`, and **at least one** child task is in `queued/`.
     - `done/`: If **all** child tasks are in `done/`.
 8. WHEN an external modification removes a parent task but leaves its children, THE Sync_Engine SHALL promote orphaned children to the removed parent's parent (or to root level if the removed parent was a root task), preserving their original IDs
 9. THE Sync_Engine SHALL log a warning when orphaned children are detected and promoted
@@ -184,7 +187,10 @@ This task involves creating the markdown parser.
 #### Acceptance Criteria
 
 1. THE FUSE_Filesystem SHALL enforce the following valid status transitions for leaf tasks:
+   - `pending/` → `queued/` (queue for execution)
    - `pending/` → `doing/` (claim)
+   - `queued/` → `doing/` (claim from queue)
+   - `queued/` → `pending/` (unqueue)
    - `doing/` → `done/` (complete)
    - `doing/` → `pending/` (unclaim)
    - `doing/` → `failed/` (fail)
