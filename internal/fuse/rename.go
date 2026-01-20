@@ -3,7 +3,6 @@ package fuse
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 
 	"bazil.org/fuse"
@@ -84,9 +83,29 @@ func (d *Dir) Rename(ctx context.Context, req *fuse.RenameRequest, newDir fs.Nod
 	// Note: dstPath would be destDir.path + "/" + req.NewName
 	// but we don't need it since we use PathManager to rebuild paths
 
-	// Acquire write lock before processing
+	// Extract source and destination status directories early (before lock)
+	srcStatus := extractStatusFromPath(d.path)
+	dstStatus := extractStatusFromPath(destDir.path)
+
+	// Validate this is a cross-directory move (not same directory)
+	// This check doesn't need the lock
+	if srcStatus == dstStatus {
+		return fuse.EPERM
+	}
+
+	// Validate filename is unchanged (doesn't need lock)
+	if req.OldName != req.NewName {
+		return fuse.EPERM
+	}
+
+	// Acquire write lock and use defer for release
 	d.fs.store.Lock()
-	defer d.fs.store.Unlock()
+	unlocked := false
+	defer func() {
+		if !unlocked {
+			d.fs.store.Unlock()
+		}
+	}()
 
 	// Validate source path exists
 	srcEntry := d.fs.store.TasksByPath[srcPath]
@@ -97,20 +116,6 @@ func (d *Dir) Rename(ctx context.Context, req *fuse.RenameRequest, newDir fs.Nod
 	// Validate this is a leaf task file (not a parent directory)
 	// Parent task directories cannot be moved (their status is derived)
 	if len(srcEntry.Task.Children) > 0 {
-		return fuse.EPERM
-	}
-
-	// Validate filename is unchanged
-	if req.OldName != req.NewName {
-		return fuse.EPERM
-	}
-
-	// Extract source and destination status directories
-	srcStatus := extractStatusFromPath(d.path)
-	dstStatus := extractStatusFromPath(destDir.path)
-
-	// Validate this is a cross-directory move (not same directory)
-	if srcStatus == dstStatus {
 		return fuse.EPERM
 	}
 
@@ -126,10 +131,17 @@ func (d *Dir) Rename(ctx context.Context, req *fuse.RenameRequest, newDir fs.Nod
 	pm := store.NewPathManager(d.fs.store)
 	pm.OnStatusChange(srcEntry.Task)
 
-	// TODO: Queue sync to file (will be implemented in Task 10-11)
-	// if d.fs.syncEngine != nil {
-	//     d.fs.syncEngine.QueueSync()
-	// }
+	// Release lock before sync (SyncToFile needs RLock)
+	d.fs.store.Unlock()
+	unlocked = true
+
+	// Trigger sync to file asynchronously (outside of lock)
+	if d.fs.syncEngine != nil {
+		// Type assert to access SyncToFile method
+		if syncer, ok := d.fs.syncEngine.(interface{ SyncToFile() error }); ok {
+			go syncer.SyncToFile()
+		}
+	}
 
 	return nil
 }
@@ -156,12 +168,3 @@ func extractStatusFromPath(path string) store.TaskStatus {
 	return status
 }
 
-// extractFilename extracts the filename from a path.
-func extractFilename(path string) string {
-	return filepath.Base(path)
-}
-
-// isLeafTaskPath checks if a path represents a leaf task (ends with .md).
-func isLeafTaskPath(path string) bool {
-	return strings.HasSuffix(path, ".md") && !strings.HasSuffix(path, "/index.md")
-}

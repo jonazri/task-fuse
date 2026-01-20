@@ -13,6 +13,11 @@ import (
 	"task-fuse/internal/store"
 )
 
+// EROFS is the Read-only file system error code.
+// This is used for Setattr operations since the filesystem is read-only
+// except for status transitions via rename.
+const EROFS = fuse.Errno(30)
+
 // StatusDirs contains all valid status directory names.
 // These are the top-level directories under the mount root.
 var StatusDirs = []store.TaskStatus{
@@ -195,9 +200,13 @@ func hashPath(path string) uint64 {
 func (d *Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 	// Handle index.md for any directory
 	if name == "index.md" {
+		indexPath := d.path + "/" + name
+		if d.path == "/" {
+			indexPath = "/" + name
+		}
 		return &File{
 			fs:   d.fs,
-			path: d.path + "/" + name,
+			path: indexPath,
 			task: nil, // index.md files have no associated task
 		}, nil
 	}
@@ -230,9 +239,10 @@ func (d *Dir) lookupInRoot(name string) (fs.Node, error) {
 	return nil, fuse.ENOENT
 }
 
-// lookupInStatusDir handles lookup in a status directory.
-// Returns task files or directories that are direct children of this status.
-func (d *Dir) lookupInStatusDir(name string) (fs.Node, error) {
+// lookupInDir handles lookup in any directory containing tasks.
+// Returns task files or directories that are direct children of this directory.
+// Used for both status directories and task directories.
+func (d *Dir) lookupInDir(name string) (fs.Node, error) {
 	// Acquire read lock on the store
 	d.fs.store.RLock()
 	defer d.fs.store.RUnlock()
@@ -261,35 +271,16 @@ func (d *Dir) lookupInStatusDir(name string) (fs.Node, error) {
 	}, nil
 }
 
+// lookupInStatusDir handles lookup in a status directory.
+// Returns task files or directories that are direct children of this status.
+func (d *Dir) lookupInStatusDir(name string) (fs.Node, error) {
+	return d.lookupInDir(name)
+}
+
 // lookupInTaskDir handles lookup in a task directory (parent task).
 // Returns child task files or directories.
 func (d *Dir) lookupInTaskDir(name string) (fs.Node, error) {
-	// Acquire read lock on the store
-	d.fs.store.RLock()
-	defer d.fs.store.RUnlock()
-
-	// Build the full path for the requested item
-	fullPath := d.path + "/" + name
-
-	// Look up in the store's TasksByPath
-	entry := d.fs.store.TasksByPath[fullPath]
-	if entry == nil {
-		return nil, fuse.ENOENT
-	}
-
-	// Return Dir for parent tasks (have children), File for leaf tasks
-	if len(entry.Task.Children) > 0 {
-		return &Dir{
-			fs:   d.fs,
-			path: fullPath,
-		}, nil
-	}
-
-	return &File{
-		fs:   d.fs,
-		path: fullPath,
-		task: entry.Task,
-	}, nil
+	return d.lookupInDir(name)
 }
 
 // isStatusDir checks if a path is a status directory (e.g., "/pending").
@@ -365,9 +356,10 @@ func (d *Dir) readDirRoot() ([]fuse.Dirent, error) {
 	return entries, nil
 }
 
-// readDirStatus returns directory entries for a status directory.
-// Contains: index.md and all tasks with this status.
-func (d *Dir) readDirStatus() ([]fuse.Dirent, error) {
+// readDirWithTasks returns directory entries for any directory containing tasks.
+// Contains: index.md and all direct child tasks.
+// Used for both status directories and task directories.
+func (d *Dir) readDirWithTasks() ([]fuse.Dirent, error) {
 	entries := make([]fuse.Dirent, 0)
 
 	// Add index.md file
@@ -381,11 +373,11 @@ func (d *Dir) readDirStatus() ([]fuse.Dirent, error) {
 	d.fs.store.RLock()
 	defer d.fs.store.RUnlock()
 
-	// Find all tasks that are direct children of this status directory
+	// Find all tasks that are direct children of this directory
 	// by iterating through TasksByPath and finding entries that match
 	prefix := d.path + "/"
 	for path, entry := range d.fs.store.TasksByPath {
-		// Check if this path is a direct child of the status directory
+		// Check if this path is a direct child of this directory
 		if !strings.HasPrefix(path, prefix) {
 			continue
 		}
@@ -414,52 +406,16 @@ func (d *Dir) readDirStatus() ([]fuse.Dirent, error) {
 	return entries, nil
 }
 
+// readDirStatus returns directory entries for a status directory.
+// Contains: index.md and all tasks with this status.
+func (d *Dir) readDirStatus() ([]fuse.Dirent, error) {
+	return d.readDirWithTasks()
+}
+
 // readDirTask returns directory entries for a task directory (parent task).
 // Contains: index.md and all child tasks.
 func (d *Dir) readDirTask() ([]fuse.Dirent, error) {
-	entries := make([]fuse.Dirent, 0)
-
-	// Add index.md file
-	entries = append(entries, fuse.Dirent{
-		Inode: hashPath(d.path + "/index.md"),
-		Type:  fuse.DT_File,
-		Name:  "index.md",
-	})
-
-	// Acquire read lock on the store
-	d.fs.store.RLock()
-	defer d.fs.store.RUnlock()
-
-	// Find all tasks that are direct children of this task directory
-	prefix := d.path + "/"
-	for path, entry := range d.fs.store.TasksByPath {
-		// Check if this path is a direct child of the task directory
-		if !strings.HasPrefix(path, prefix) {
-			continue
-		}
-
-		// Extract the filename (everything after the prefix)
-		filename := path[len(prefix):]
-
-		// Skip if this is a nested path (contains more slashes)
-		if strings.Contains(filename, "/") {
-			continue
-		}
-
-		// Determine if this is a directory (parent task) or file (leaf task)
-		entryType := fuse.DT_File
-		if len(entry.Task.Children) > 0 {
-			entryType = fuse.DT_Dir
-		}
-
-		entries = append(entries, fuse.Dirent{
-			Inode: hashPath(path),
-			Type:  entryType,
-			Name:  filename,
-		})
-	}
-
-	return entries, nil
+	return d.readDirWithTasks()
 }
 
 // File represents a file node in the FUSE filesystem.
@@ -693,7 +649,7 @@ func (d *Dir) Mkdir(ctx context.Context, req *fuse.MkdirRequest) (fs.Node, error
 // Implements fs.NodeSetattrer interface.
 // Validates: Design - All mutating operations return EPERM or EROFS
 func (f *File) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.SetattrResponse) error {
-	return fuse.Errno(30) // EROFS - Read-only file system
+	return EROFS
 }
 
 // Setattr rejects attribute modification on directories.
@@ -702,7 +658,7 @@ func (f *File) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 // Implements fs.NodeSetattrer interface.
 // Validates: Design - All mutating operations return EPERM or EROFS
 func (d *Dir) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.SetattrResponse) error {
-	return fuse.Errno(30) // EROFS - Read-only file system
+	return EROFS
 }
 
 // Symlink rejects symbolic link creation.

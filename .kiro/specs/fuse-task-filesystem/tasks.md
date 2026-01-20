@@ -26,7 +26,7 @@
 
 - [x] 2. Tasks.md Parser Implementation
   - [x] 2.1 Implement checkbox parsing in `internal/parser/parser.go`
-    - Implement `ParseCheckbox(line string) (TaskStatus, bool)` to extract status from `- [ ]`, `- [~]`, `- [-]`, `- [x]`, `- [!]`
+    - Implement `ParseCheckbox(line string) (TaskStatus, bool)` to extract status from `- [ ]`, `- [ ]`, `- [-]`, `- [x]`, `- [!]`
     - Return `false` for lines without valid checkbox syntax
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5**
   - [x] 2.2 Implement task ID extraction and validation
@@ -72,7 +72,7 @@
 
 - [x] 3. Pretty Printer Implementation
   - [x] 3.1 Implement status-to-checkbox conversion in `internal/printer/printer.go`
-    - Implement `StatusToCheckbox(status TaskStatus) string` returning `- [ ]`, `- [~]`, `- [-]`, `- [x]`, `- [!]`
+    - Implement `StatusToCheckbox(status TaskStatus) string` returning `- [ ]`, `- [ ]`, `- [-]`, `- [x]`, `- [!]`
     - **Validates: Requirements 1.9**
   - [x] 3.2 Implement task serialization
     - Implement `FormatTask(task *Task) string` preserving original indentation and content
@@ -384,36 +384,36 @@
 
 ## Task 16: Linux Remote Testing (FUSE Verification)
 
-- [ ] 16. Linux Remote Testing (FUSE Verification)
-  - [ ] 16.1 Set up remote test environment
-    - SSH to Linux dev box: `ssh -i ~/.ssh/yaz_tto ubuntu@100.110.0.80`
+- [x] 16. Linux Remote Testing (FUSE Verification)
+  - [x] 16.1 Set up remote test environment
+    - SSH to Linux dev box
     - Verify Go is installed (install if needed)
     - Verify FUSE is available (`fusermount --version`)
     - Create working directory for test execution
     - **Validates: Requirements 5.1, 5.2 - FUSE operations require Linux**
-  - [ ] 16.2 Deploy code to remote environment
+  - [x] 16.2 Deploy code to remote environment
     - Copy project files to remote Linux box via rsync/scp
     - Run `go mod download` to fetch dependencies
     - Verify `bazil.org/fuse` compiles successfully on Linux
     - **Validates: Design - Implementation Language: Go**
-  - [ ] 16.3 Run FUSE unit tests on Linux
+  - [x] 16.3 Run FUSE unit tests on Linux
     - Execute `go test ./internal/fuse/...` on remote
     - Verify fs_test.go tests pass
     - Capture and review test output
     - **Validates: Task 6, Task 7, Task 8, Task 9 - FUSE filesystem tests**
-  - [ ] 16.4 Run FUSE integration tests on Linux
+  - [x] 16.4 Run FUSE integration tests on Linux
     - Execute `go test ./internal/integration/...` on remote
     - Verify end-to-end workflow test passes
     - Verify multi-agent simulation test passes
     - Verify external modification test passes
     - Verify crash recovery test passes
     - **Validates: Task 15 - Integration Testing**
-  - [ ] 16.5 Run full test suite on Linux
+  - [x] 16.5 Run full test suite on Linux
     - Execute `go test ./...` to run all tests
     - Verify all property-based tests pass
     - Document any test failures for investigation
     - **Validates: All Properties 1-17**
-  - [ ] 16.6 Manual FUSE mount verification
+  - [x] 16.6 Manual FUSE mount verification
     - Build the binary: `go build ./cmd/task-fuse`
     - Create a test tasks.md file
     - Mount filesystem and verify directory structure
@@ -421,3 +421,88 @@
     - Verify tasks.md updates correctly
     - Unmount and verify clean shutdown
     - **Validates: Requirements 2.1-2.10, 4.1-4.9, 6.1-6.4**
+
+
+## Task 17: PR Review Comments
+
+- [x] 17. Address PR Review Comments
+  - [x] 17.1 Fetch and review line-level comments from PR
+    - Use `gh api repos/jonazri/task-fuse/pulls/1/comments` to fetch review comments
+    - Document each comment and the file/line it references
+    - Categorize comments by type (bug fix, style, documentation, etc.)
+  - [x] 17.2 Address each review comment
+    - Make code changes as requested in comments
+    - Run tests to verify changes don't break functionality
+    - Document any comments that were intentionally not addressed with rationale
+  - [x] 17.3 Verify all changes on Linux
+    - Deploy updated code to Linux remote box
+    - Run full test suite to ensure no regressions
+    - **Validates: Task 16 - Linux Remote Testing**
+
+
+## Task 18: Address TODOs and Placeholders
+
+- [x] 18. Address TODOs and Placeholders
+  - [x] 18.1 Implement proper logging infrastructure
+    - Add a logging library (e.g., `log/slog` or `zerolog`)
+    - Replace placeholder log configuration in `cmd/task-fuse/main.go:138`
+    - Wire up `--log-level`, `--log-format`, `--log-file` CLI options
+    - **File: cmd/task-fuse/main.go**
+  - [x] 18.2 Add logging for sync errors
+    - Replace `_ = err // TODO: Add proper logging` in `internal/sync/sync.go:258`
+    - Log sync errors with appropriate severity level
+    - **File: internal/sync/sync.go**
+  - [x] 18.3 Add logging for orphaned children detection
+    - Replace `// TODO: Add proper logging` in `internal/sync/sync.go:437`
+    - Log warning when orphaned children are detected and promoted
+    - Include task IDs in log message
+    - **Validates: Requirements 4.9**
+    - **File: internal/sync/sync.go**
+  - [x] 18.4 Implement status command properly
+    - Replace placeholder message in `cmd/task-fuse/main.go:302`
+    - Track mounted filesystems (possibly via PID file or shared state)
+    - Display actual task counts and sync status
+    - **Validates: Design - Status Command**
+    - **File: cmd/task-fuse/main.go**
+
+
+## Task 19: Address Code Review Feedback
+
+- [x] 19. Address Code Review Feedback (from tmp/codereview.md)
+  - [x] 19.1 Consolidate triple-duplicated status derivation logic (HIGH)
+    - Move canonical `DeriveStatus()` to `internal/store/status.go`
+    - Update `PathManager.DeriveStatus()` in paths.go to delegate to it
+    - Update `IndexGenerator.deriveStatus()` in index.go to delegate to it
+    - Remove duplicate implementations
+    - **Files: internal/store/paths.go, internal/store/status.go, internal/fuse/index.go**
+  - [x] 19.2 Extract duplicate lookup methods (MEDIUM)
+    - Create `lookupInDir(name string)` helper in fs.go
+    - Refactor `lookupInStatusDir()` and `lookupInTaskDir()` to use helper
+    - **File: internal/fuse/fs.go:239-297**
+  - [x] 19.3 Extract duplicate readDir methods (MEDIUM)
+    - Create helper for common iteration logic
+    - Refactor `readDirStatus()` and `readDirTask()` to use helper
+    - **File: internal/fuse/fs.go:374-467**
+  - [x] 19.4 Refactor rename to use defer for lock release (MEDIUM)
+    - Replace manual `Unlock()` calls with `defer d.fs.store.Unlock()`
+    - Restructure validation to allow early returns without manual unlock
+    - **File: internal/fuse/rename.go:88-134**
+  - [x] 19.5 Remove ghost code - unused functions (LOW)
+    - Remove `extractFilename()` function (never called)
+    - Remove `isLeafTaskPath()` function (never called)
+    - **File: internal/fuse/rename.go:169-177**
+  - [x] 19.6 Remove ghost code - unused changeQueue channel (LOW)
+    - Remove `changeQueue chan FileChange` from SyncEngine struct
+    - Remove initialization in NewSyncEngine
+    - **File: internal/sync/sync.go:47-48, 99**
+  - [x] 19.7 Define EROFS constant (LOW)
+    - Replace magic number `fuse.Errno(30)` with named constant
+    - Apply to both File.Setattr and Dir.Setattr
+    - **File: internal/fuse/fs.go:700, 709**
+  - [x] 19.8 Handle temp file cleanup error (LOW)
+    - Log error if temp file removal fails after atomic rename failure
+    - **File: internal/sync/sync.go:653**
+  - [x] 19.9 Add test coverage for read-only enforcement
+    - Add explicit tests for Write, Create, Remove, Mkdir, Setattr methods
+    - Verify EPERM/EROFS returns
+    - **File: internal/fuse/fs_test.go**

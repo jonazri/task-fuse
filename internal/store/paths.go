@@ -33,61 +33,12 @@ func NewPathManager(store *TaskStore) *PathManager {
 // For parent tasks: derives status from children using precedence rules.
 // Precedence: doing > failed > pending > queued > done
 //
+// This method delegates to the canonical DeriveParentStatus function
+// in status.go to avoid code duplication.
+//
 // Validates: Requirements 4.7
 func (pm *PathManager) DeriveStatus(task *Task) TaskStatus {
-	if task == nil {
-		return StatusPending
-	}
-
-	// Leaf task: return its own status
-	if len(task.Children) == 0 {
-		return task.Status
-	}
-
-	// Parent task: derive from children
-	// Precedence: doing > failed > pending > queued > done
-	hasDoing := false
-	hasFailed := false
-	hasPending := false
-	hasQueued := false
-	allDone := true
-
-	for _, child := range task.Children {
-		childStatus := pm.DeriveStatus(child)
-		switch childStatus {
-		case StatusDoing:
-			hasDoing = true
-		case StatusFailed:
-			hasFailed = true
-		case StatusPending:
-			hasPending = true
-		case StatusQueued:
-			hasQueued = true
-		}
-		if childStatus != StatusDone {
-			allDone = false
-		}
-	}
-
-	// Apply precedence rules
-	if hasDoing {
-		return StatusDoing
-	}
-	if hasFailed {
-		return StatusFailed
-	}
-	if hasPending {
-		return StatusPending
-	}
-	if hasQueued {
-		return StatusQueued
-	}
-	if allDone {
-		return StatusDone
-	}
-
-	// Default to pending (shouldn't reach here with valid children)
-	return StatusPending
+	return DeriveParentStatus(task)
 }
 
 // RebuildPaths rebuilds paths for a task and all its descendants.
@@ -418,10 +369,36 @@ func ResolveCollision(filename string, existingFilenames map[string]bool) string
 func splitFilenameExtension(filename string) (base, ext string) {
 	// Look for .md extension specifically (case-sensitive)
 	if strings.HasSuffix(filename, ".md") {
-		return filename[:len(filename)-3], ".md"
+		base := filename[:len(filename)-3]
+
+		// Heuristic: names like "1.md" are used as directory names in some cases.
+		// For such directory-like names, we must *not* treat ".md" as a file
+		// extension; instead, collision suffixes are appended after the full name,
+		// e.g. "1.md" -> "1.md-2".
+		//
+		// To avoid changing existing behavior for regular files like
+		// "task.md" or "1.1.task.md", we only treat the name as having a
+		// ".md" extension when the part before ".md" is not purely numeric.
+		if !isAllDigits(base) {
+			return base, ".md"
+		}
 	}
-	// No .md extension found, return filename as base with empty extension
+	// No .md extension found (or treated as directory-like), return filename
+	// as base with empty extension.
 	return filename, ""
+}
+
+// isAllDigits reports whether s consists solely of decimal digit characters.
+func isAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 // itoa converts an integer to a string without importing strconv.

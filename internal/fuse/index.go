@@ -207,58 +207,11 @@ func (ig *IndexGenerator) getTasksByStatus(status store.TaskStatus) []*store.Tas
 // For leaf tasks: returns the task's own status.
 // For parent tasks: derives status from children using precedence rules.
 // Precedence: doing > failed > pending > queued > done
+//
+// This method delegates to the canonical store.DeriveParentStatus function
+// to avoid code duplication.
 func (ig *IndexGenerator) deriveStatus(task *store.Task) store.TaskStatus {
-	if task == nil {
-		return store.StatusPending
-	}
-
-	// Leaf task: return its own status
-	if len(task.Children) == 0 {
-		return task.Status
-	}
-
-	// Parent task: derive from children
-	hasDoing := false
-	hasFailed := false
-	hasPending := false
-	hasQueued := false
-	allDone := true
-
-	for _, child := range task.Children {
-		childStatus := ig.deriveStatus(child)
-		switch childStatus {
-		case store.StatusDoing:
-			hasDoing = true
-		case store.StatusFailed:
-			hasFailed = true
-		case store.StatusPending:
-			hasPending = true
-		case store.StatusQueued:
-			hasQueued = true
-		}
-		if childStatus != store.StatusDone {
-			allDone = false
-		}
-	}
-
-	// Apply precedence rules
-	if hasDoing {
-		return store.StatusDoing
-	}
-	if hasFailed {
-		return store.StatusFailed
-	}
-	if hasPending {
-		return store.StatusPending
-	}
-	if hasQueued {
-		return store.StatusQueued
-	}
-	if allDone {
-		return store.StatusDone
-	}
-
-	return store.StatusPending
+	return store.DeriveParentStatus(task)
 }
 
 // getStatusEmoji returns the emoji for a given status.

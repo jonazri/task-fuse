@@ -4,6 +4,7 @@ package sync
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -43,9 +44,6 @@ type SyncEngine struct {
 
 	// watcher is the fsnotify file watcher
 	watcher *fsnotify.Watcher
-
-	// changeQueue holds external changes to be processed
-	changeQueue chan FileChange
 
 	// stopChan signals the watcher goroutine to stop
 	stopChan chan struct{}
@@ -96,7 +94,6 @@ func NewSyncEngine(store *store.TaskStore, parser *parser.Parser, printer *print
 		parser:           parser,
 		printer:          printer,
 		tasksFile:        tasksFile,
-		changeQueue:      make(chan FileChange, 100),
 		stopChan:         make(chan struct{}),
 		debounceDuration: 100 * time.Millisecond,
 		pollInterval:     1 * time.Second,
@@ -255,7 +252,7 @@ func (s *SyncEngine) watchLoop() {
 				return
 			}
 			// Log error and continue
-			_ = err // TODO: Add proper logging
+			slog.Error("file watcher error", "error", err, "file", s.tasksFile)
 		}
 	}
 }
@@ -433,8 +430,10 @@ func (s *SyncEngine) applyExternalChanges(newDoc *store.ParsedDocument) {
 	// Detect orphaned children (children whose parents were removed)
 	orphanedChildren := s.detectOrphanedChildren(oldTasksByID, newTasksByID)
 	if len(orphanedChildren) > 0 {
-		// Log warning about orphaned children
-		// TODO: Add proper logging
+		// Log warning about orphaned children (Validates: Requirements 4.9)
+		slog.Warn("orphaned children detected and promoted",
+			"orphaned_task_ids", orphanedChildren,
+			"count", len(orphanedChildren))
 		// Promote orphaned children to their grandparent level
 		s.promoteOrphanedChildren(newDoc, orphanedChildren, oldTasksByID)
 	}
@@ -650,7 +649,12 @@ func (s *SyncEngine) SyncToFile() error {
 	err = os.Rename(tempFile, s.tasksFile)
 	if err != nil {
 		// Clean up temp file on failure
-		os.Remove(tempFile)
+		if removeErr := os.Remove(tempFile); removeErr != nil {
+			slog.Error("failed to remove temp file after rename failure",
+				"temp_file", tempFile,
+				"rename_error", err,
+				"remove_error", removeErr)
+		}
 		return err
 	}
 
