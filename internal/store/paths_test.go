@@ -1275,6 +1275,45 @@ func TestSplitFilenameExtension(t *testing.T) {
 			expectedBase: "file.txt",
 			expectedExt:  "",
 		},
+		// Test cases for numeric directory names (PR review fix)
+		// Directory names like "1.md" should NOT be treated as having .md extension
+		{
+			name:         "numeric directory name 1.md",
+			filename:     "1.md",
+			expectedBase: "1.md",
+			expectedExt:  "",
+		},
+		{
+			name:         "numeric directory name 123.md",
+			filename:     "123.md",
+			expectedBase: "123.md",
+			expectedExt:  "",
+		},
+		{
+			name:         "numeric directory name 42.md",
+			filename:     "42.md",
+			expectedBase: "42.md",
+			expectedExt:  "",
+		},
+		// Non-numeric bases should still be treated as having .md extension
+		{
+			name:         "alphanumeric base task1.md",
+			filename:     "task1.md",
+			expectedBase: "task1",
+			expectedExt:  ".md",
+		},
+		{
+			name:         "alphanumeric base 1task.md",
+			filename:     "1task.md",
+			expectedBase: "1task",
+			expectedExt:  ".md",
+		},
+		{
+			name:         "dotted numeric ID 1.2.task.md",
+			filename:     "1.2.task.md",
+			expectedBase: "1.2.task",
+			expectedExt:  ".md",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1313,6 +1352,95 @@ func TestItoa(t *testing.T) {
 			result := itoa(tt.input)
 			if result != tt.expected {
 				t.Errorf("itoa(%d) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsAllDigits tests the helper function for checking if a string is all digits.
+func TestIsAllDigits(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "single digit",
+			input:    "1",
+			expected: true,
+		},
+		{
+			name:     "multiple digits",
+			input:    "123",
+			expected: true,
+		},
+		{
+			name:     "zero",
+			input:    "0",
+			expected: true,
+		},
+		{
+			name:     "large number",
+			input:    "9876543210",
+			expected: true,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "letters only",
+			input:    "abc",
+			expected: false,
+		},
+		{
+			name:     "mixed alphanumeric",
+			input:    "1a2b",
+			expected: false,
+		},
+		{
+			name:     "digit then letter",
+			input:    "1a",
+			expected: false,
+		},
+		{
+			name:     "letter then digit",
+			input:    "a1",
+			expected: false,
+		},
+		{
+			name:     "with dot",
+			input:    "1.2",
+			expected: false,
+		},
+		{
+			name:     "with underscore",
+			input:    "1_2",
+			expected: false,
+		},
+		{
+			name:     "with hyphen",
+			input:    "1-2",
+			expected: false,
+		},
+		{
+			name:     "with space",
+			input:    "1 2",
+			expected: false,
+		},
+		{
+			name:     "unicode digits",
+			input:    "١٢٣", // Arabic-Indic digits
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isAllDigits(tt.input)
+			if result != tt.expected {
+				t.Errorf("isAllDigits(%q) = %v, want %v", tt.input, result, tt.expected)
 			}
 		})
 	}

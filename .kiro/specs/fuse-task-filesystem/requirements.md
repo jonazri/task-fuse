@@ -215,6 +215,16 @@ This task involves creating the markdown parser.
 6. IF generating a filename results in a collision, THEN THE FUSE_Filesystem SHALL append a numeric suffix before the extension (e.g., `1.1.implement_parser.md` becomes `1.1.implement_parser-2.md`)
 
 
+## Platform Requirements
+
+The FUSE Task Filesystem requires Linux for operation:
+
+- **Linux**: Fully supported. The `bazil.org/fuse` library requires Linux for FUSE operations.
+- **macOS**: Not supported. The FUSE library does not compile on macOS.
+- **Windows**: Not supported.
+
+Development and unit testing of non-FUSE components (parser, printer, store) can be done on any platform, but FUSE integration tests and manual verification require a Linux environment.
+
 ## Non-Requirements (Explicitly Out of Scope)
 
 The following capabilities are explicitly NOT part of this specification:

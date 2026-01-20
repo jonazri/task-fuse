@@ -532,19 +532,48 @@ func verifyHierarchyP3(t *rapid.T, taskStore *TaskStore, task *Task, parentPath 
 		}
 	}
 
-	// Property 3: Parent tasks (with children) should be directories (no .md extension)
+	// Property 3: Verify correct filename/dirname generation
+	// Parent tasks use GenerateDirname: {id}.{slug} (no .md extension added)
+	// Leaf tasks use GenerateFilename: {id}.{slug}.md (with .md extension added)
+	//
+	// Note: A directory CAN end with ".md" if the task title happens to be "md"
+	// (e.g., task 1.2.3 with title "md" -> dirname "1.2.3.md")
+	// So we verify by comparing against the expected generated name, not by
+	// checking if the path ends with ".md".
+	expectedDirname := GenerateDirname(task)
+	expectedFilename := GenerateFilename(task)
+
+	// Extract the basename from the path (last component)
+	pathParts := strings.Split(taskPath, "/")
+	basename := pathParts[len(pathParts)-1]
+
 	if len(task.Children) > 0 {
-		if strings.HasSuffix(taskPath, ".md") {
-			t.Fatalf("Parent task %s path %q should not end with .md (should be directory)",
+		// Parent task - should use dirname (no .md extension added)
+		// The basename might have a collision suffix like "-2", so we need to handle that
+		if !strings.HasPrefix(basename, task.ID+".") {
+			t.Fatalf("Parent task %s path %q basename %q should start with task ID prefix %q",
+				task.ID, taskPath, basename, task.ID+".")
+		}
+		// Verify it's NOT using the filename format (which would have double .md for title "md")
+		if basename == expectedFilename {
+			t.Fatalf("Parent task %s path %q should use dirname format, not filename format",
 				task.ID, taskPath)
 		}
 	} else {
-		// Leaf tasks should be files (with .md extension)
-		if !strings.HasSuffix(taskPath, ".md") {
+		// Leaf task - should use filename (with .md extension added)
+		if !strings.HasSuffix(basename, ".md") {
 			t.Fatalf("Leaf task %s path %q should end with .md (should be file)",
 				task.ID, taskPath)
 		}
+		// Verify it's using the filename format
+		if !strings.HasPrefix(basename, task.ID+".") {
+			t.Fatalf("Leaf task %s path %q basename %q should start with task ID prefix %q",
+				task.ID, taskPath, basename, task.ID+".")
+		}
 	}
+
+	// Use expectedDirname and expectedFilename to avoid unused variable errors
+	_ = expectedDirname
 
 	// Property 4: Task path should contain the task ID
 	if !strings.Contains(taskPath, task.ID+".") {

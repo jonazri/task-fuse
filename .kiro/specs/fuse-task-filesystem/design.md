@@ -1319,3 +1319,111 @@ This section documents key design decisions and their rationale.
 - Strict 2-space only: Too restrictive, breaks existing files
 - Strict 4-space only: Same problem
 - No tab support: Excludes tab-preferring users
+
+
+## Implementation Notes
+
+This section documents important implementation details, bug fixes, and platform-specific considerations discovered during development and testing.
+
+### Platform Compatibility
+
+**FUSE Library (bazil.org/fuse):** The `bazil.org/fuse` library only compiles on Linux. macOS and Windows are not supported. All FUSE-related tests and manual verification must be performed on a Linux system.
+
+### Mount Options
+
+**Do NOT use `fuse.ReadOnly()`:** The filesystem must NOT be mounted with the `fuse.ReadOnly()` option. While task files are read-only at the application level (returning EPERM on write attempts), the FUSE mount itself must allow rename operations for status transitions.
+
+```go
+// CORRECT: No ReadOnly option
+c, err := fuse.Mount(
+    mountPoint,
+    fuse.FSName("task-fuse"),
+    fuse.Subtype("taskfs"),
+)
+
+// WRONG: This blocks rename operations
+c, err := fuse.Mount(
+    mountPoint,
+    fuse.FSName("task-fuse"),
+    fuse.Subtype("taskfs"),
+    fuse.ReadOnly(),  // DO NOT USE
+)
+```
+
+### Path Construction
+
+**Root directory path handling:** When constructing paths for the root directory, be careful with path concatenation. The root directory path is `/`, so naive concatenation produces `//index.md` instead of `/index.md`.
+
+```go
+// CORRECT
+indexPath := d.path + "/" + name
+if d.path == "/" {
+    indexPath = "/" + name  // Results in "/index.md"
+}
+
+// WRONG (produces "//index.md")
+indexPath := d.path + "/" + name  // When d.path == "/"
+```
+
+### Sync After Rename (Deadlock Prevention)
+
+**Asynchronous sync trigger:** After a rename operation updates task status, `SyncToFile()` must be called asynchronously (in a goroutine) to avoid deadlock. The rename handler holds a write lock, and `SyncToFile()` needs a read lock. Calling sync synchronously would cause the goroutine to wait for itself.
+
+```go
+// In rename.go - Rename() method
+
+// Release lock before sync (SyncToFile needs RLock)
+d.fs.store.Unlock()
+
+// Trigger sync to file asynchronously (outside of lock)
+if d.fs.syncEngine != nil {
+    if syncer, ok := d.fs.syncEngine.(interface{ SyncToFile() error }); ok {
+        go syncer.SyncToFile()  // MUST be async to avoid deadlock
+    }
+}
+```
+
+### Error Handling for os.Stat
+
+**Check error before accessing FileInfo:** When using `os.Stat()`, always check for errors before accessing the returned `FileInfo`. The function can return errors other than `IsNotExist` (e.g., permission denied), and accessing `info` when `err != nil` causes a nil pointer dereference.
+
+```go
+// CORRECT
+info, err := os.Stat(mountPoint)
+if err != nil {
+    if os.IsNotExist(err) {
+        fmt.Fprintf(os.Stderr, "Error: mountpoint does not exist: %s\n", mountPoint)
+    } else {
+        fmt.Fprintf(os.Stderr, "Error: cannot access mountpoint: %v\n", err)
+    }
+    return ExitMountFailed
+}
+if !info.IsDir() {
+    // Safe to access info here
+}
+
+// WRONG (nil pointer if err != nil but not IsNotExist)
+info, err := os.Stat(mountPoint)
+if os.IsNotExist(err) {
+    // handle not exist
+}
+if !info.IsDir() {  // CRASH if err was permission denied
+    // ...
+}
+```
+
+### Index File Size
+
+**Index files have content:** Index files (`index.md`) are not empty—they contain generated markdown content (status counts, task lists, etc.). Tests should not expect `Size: 0` for index files.
+
+```go
+// Index files have dynamically generated content
+func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
+    // ...
+    if f.task == nil {
+        // Index file: generate content to get size
+        content := f.generateIndexContent()
+        a.Size = uint64(len(content))  // NOT zero
+    }
+}
+```
