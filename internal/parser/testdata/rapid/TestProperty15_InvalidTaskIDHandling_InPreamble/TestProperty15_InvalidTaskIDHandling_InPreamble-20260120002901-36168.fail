@@ -1,0 +1,50 @@
+# 2026/01/20 00:29:01.633070 [TestProperty15_InvalidTaskIDHandling_InPreamble] [rapid] draw invalidCheckbox: " "
+# 2026/01/20 00:29:01.633074 [TestProperty15_InvalidTaskIDHandling_InPreamble] [rapid] draw invalidID: "1."
+# 2026/01/20 00:29:01.633076 [TestProperty15_InvalidTaskIDHandling_InPreamble] [rapid] draw invalidTitle: "0"
+# 2026/01/20 00:29:01.633077 [TestProperty15_InvalidTaskIDHandling_InPreamble] [rapid] draw validCheckbox: " "
+# 2026/01/20 00:29:01.633077 [TestProperty15_InvalidTaskIDHandling_InPreamble] [rapid] draw validID: "1"
+# 2026/01/20 00:29:01.633079 [TestProperty15_InvalidTaskIDHandling_InPreamble] [rapid] draw validTitle: "0"
+# 2026/01/20 00:29:01.633081 [TestProperty15_InvalidTaskIDHandling_InPreamble] Invalid ID line "- [ ] 1. 0" was not found in preamble. Preamble: []
+# 
+v0.4.8#2198240077946691992
+0x0
+0x0
+0x0
+0x6b74f03291620
+0x5
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

@@ -1,0 +1,55 @@
+# 2026/01/20 00:52:17.738468 [TestProperty13_MalformedLinePreservation_ByteForByte] [rapid] draw malformedLine: "- [ ] 1 0"
+# 2026/01/20 00:52:17.738471 [TestProperty13_MalformedLinePreservation_ByteForByte] [rapid] draw taskID: "1"
+# 2026/01/20 00:52:17.738473 [TestProperty13_MalformedLinePreservation_ByteForByte] [rapid] draw title: "0"
+# 2026/01/20 00:52:17.738473 [TestProperty13_MalformedLinePreservation_ByteForByte] [rapid] draw status: "pending"
+# 2026/01/20 00:52:17.738480 [TestProperty13_MalformedLinePreservation_ByteForByte] Malformed line not found byte-for-byte in description.
+# Expected: "  - [ ] 1 0"
+# Description lines: []
+# 
+v0.4.8#10726113868879006266
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

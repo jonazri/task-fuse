@@ -41,3 +41,4 @@ dist/
 # macOS resource forks
 .fseventsd
 .TemporaryItems
+tmp/

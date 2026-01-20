@@ -1,0 +1,18 @@
+# 2026/01/20 09:41:28.184916 [TestProperty8_SyncContentIntegrity_DescriptionPreservation] [rapid] draw task: &store.Task{FileLine:store.FileLine{LineNumber:0, RawContent:"", IndentLevel:0}, ID:"1", Title:"a", Status:"pending", Description:[]store.FileLine{}, Children:[]*store.Task(nil), Parent:(*store.Task)(nil)}
+# 2026/01/20 09:41:28.185017 [TestProperty8_SyncContentIntegrity_DescriptionPreservation] Expected 1 root task, got 0
+# 
+v0.4.8#17778959748805938187
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
