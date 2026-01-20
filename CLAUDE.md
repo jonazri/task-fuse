@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 task-fuse is a Go-based FUSE filesystem that exposes Kiro PRD `tasks.md` files as a virtual filesystem. It enables multiple AI agents to work on tasks concurrently without race conditions by using atomic filesystem operations (`mv`) for task status transitions.
 
-**Current State:** Specifications complete, implementation not yet started.
+**Platform:** Linux only (FUSE library `bazil.org/fuse` requires Linux). Parser, printer, and store components can be developed/tested on any platform.
 
 ## Build Commands
 
@@ -27,16 +27,18 @@ go test -run TestName ./internal/parser
 go test -v ./...
 ```
 
-## Project Structure (Planned)
+## Project Structure
 
 ```
-cmd/task-fuse/       # CLI entry point
+cmd/task-fuse/       # CLI entry point (mount, unmount, status, version commands)
 internal/
   parser/            # tasks.md markdown parser
   printer/           # Markdown serialization
   store/             # TaskStore, path management, status derivation
   fuse/              # FUSE filesystem implementation
   sync/              # Bidirectional sync engine
+  logging/           # Structured logging infrastructure
+  integration/       # Integration tests (requires Linux)
 ```
 
 ## Architecture
@@ -45,7 +47,7 @@ internal/
 
 1. **Tasks_MD_Parser** - Parses checkbox-based task lists from markdown into hierarchical task trees
 2. **Pretty_Printer** - Serializes task objects back to markdown, preserving non-task content
-3. **FUSE_Filesystem** - Exposes tasks as files in status directories (`pending/`, `doing/`, `done/`, `failed/`)
+3. **FUSE_Filesystem** - Exposes tasks as files in status directories (`pending/`, `queued/`, `doing/`, `done/`, `failed/`)
 4. **Sync_Engine** - Maintains bidirectional sync between filesystem and tasks.md
 5. **TaskStore** - In-memory task storage with `sync.RWMutex` for concurrent access
 
@@ -53,7 +55,7 @@ internal/
 
 - **Filesystem wins conflicts**: When filesystem operations and external edits conflict, filesystem takes precedence
 - **Children live under parents**: Child tasks always appear under their parent directory regardless of individual status
-- **Parent status derived**: Parent task status is auto-derived from children (doing > failed > pending > done)
+- **Parent status derived**: Parent task status is auto-derived from children (doing > failed > pending > queued > done)
 - **Read-only files**: Task content is read-only; only status transitions via `mv` are allowed
 - **ENOENT for races**: When agents race to claim a task, losers get ENOENT (task was moved)
 
@@ -69,13 +71,15 @@ internal/
 | Status  | Checkbox | Example |
 |---------|----------|---------|
 | Pending | `- [ ]`  | `- [ ] 1.1 Task` |
-| Doing   | `- [-]`  | `- [-] 1.2 Task` |
-| Done    | `- [x]`  | `- [x] 1.3 Task` |
-| Failed  | `- [!]`  | `- [!] 1.4 Task` |
+| Queued  | `- [~]`  | `- [~] 1.2 Task` |
+| Doing   | `- [-]`  | `- [-] 1.3 Task` |
+| Done    | `- [x]`  | `- [x] 1.4 Task` |
+| Failed  | `- [!]`  | `- [!] 1.5 Task` |
 
 ### Valid Status Transitions (Leaf Tasks Only)
 
-- `pending` → `doing`
+- `pending` → `queued`, `doing`
+- `queued` → `doing`, `pending`
 - `doing` → `done`, `pending`, `failed`
 - `done` → `doing`
 - `failed` → `pending`, `doing`

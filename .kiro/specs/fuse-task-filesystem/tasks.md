@@ -506,3 +506,24 @@
     - Add explicit tests for Write, Create, Remove, Mkdir, Setattr methods
     - Verify EPERM/EROFS returns
     - **File: internal/fuse/fs_test.go**
+
+
+## Task 20: Update CLAUDE.md Documentation
+
+- [x] 20. Update CLAUDE.md to Reflect Implementation
+  - [x] 20.1 Add queued status to Checkbox Syntax table
+    - Add row: `Queued | \`- [~]\` | \`- [~] 1.2 Task\``
+    - Update table to show all 5 statuses
+    - **File: CLAUDE.md**
+  - [x] 20.2 Update status directories in Core Components
+    - Change `FUSE_Filesystem` description to include `queued/` directory
+    - Update: "Exposes tasks as files in status directories (`pending/`, `queued/`, `doing/`, `done/`, `failed/`)"
+    - **File: CLAUDE.md**
+  - [x] 20.3 Update Valid Status Transitions section
+    - Add queued-related transitions:
+      - `pending` → `queued`, `doing`
+      - `queued` → `doing`, `pending`
+    - **File: CLAUDE.md**
+  - [x] 20.4 Update Parent Status Derivation in Key Design Decisions
+    - Change precedence to: "doing > failed > pending > queued > done"
+    - **File: CLAUDE.md**

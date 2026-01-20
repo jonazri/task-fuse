@@ -1685,15 +1685,6 @@ func serializeDocument(doc GeneratedDocument) string {
 	return strings.Join(lines, "\n")
 }
 
-// countTasks recursively counts all tasks in a tree.
-func countTasks(tasks []*GeneratedTask) int {
-	count := len(tasks)
-	for _, task := range tasks {
-		count += countTasks(task.Children)
-	}
-	return count
-}
-
 // countParsedTasks recursively counts all tasks in a parsed tree.
 func countParsedTasks(tasks []*store.Task) int {
 	count := len(tasks)
@@ -1701,62 +1692,6 @@ func countParsedTasks(tasks []*store.Task) int {
 		count += countParsedTasks(task.Children)
 	}
 	return count
-}
-
-// compareTaskTrees compares two task trees for equivalence.
-// Returns an error message if they differ, or empty string if equivalent.
-func compareTaskTrees(original []*GeneratedTask, parsed []*store.Task) string {
-	if len(original) != len(parsed) {
-		return fmt.Sprintf("task count mismatch: original=%d, parsed=%d", len(original), len(parsed))
-	}
-
-	for i := range original {
-		if err := compareTask(original[i], parsed[i]); err != "" {
-			return err
-		}
-	}
-	return ""
-}
-
-// compareTask compares a single generated task with a parsed task.
-func compareTask(original *GeneratedTask, parsed *store.Task) string {
-	// Compare ID
-	if original.ID != parsed.ID {
-		return fmt.Sprintf("ID mismatch: original=%q, parsed=%q", original.ID, parsed.ID)
-	}
-
-	// Compare Title
-	if original.Title != parsed.Title {
-		return fmt.Sprintf("Title mismatch for task %s: original=%q, parsed=%q",
-			original.ID, original.Title, parsed.Title)
-	}
-
-	// Compare Status
-	if original.Status != parsed.Status {
-		return fmt.Sprintf("Status mismatch for task %s: original=%q, parsed=%q",
-			original.ID, original.Status, parsed.Status)
-	}
-
-	// Compare Description count (content may have slight formatting differences)
-	if len(original.Description) != len(parsed.Description) {
-		return fmt.Sprintf("Description count mismatch for task %s: original=%d, parsed=%d",
-			original.ID, len(original.Description), len(parsed.Description))
-	}
-
-	// Compare description content
-	for j, origDesc := range original.Description {
-		if origDesc != parsed.Description[j].RawContent {
-			return fmt.Sprintf("Description mismatch for task %s line %d: original=%q, parsed=%q",
-				original.ID, j, origDesc, parsed.Description[j].RawContent)
-		}
-	}
-
-	// Compare Children recursively
-	if err := compareTaskTrees(original.Children, parsed.Children); err != "" {
-		return fmt.Sprintf("Children mismatch for task %s: %s", original.ID, err)
-	}
-
-	return ""
 }
 
 // TestProperty1_ParserRoundTripConsistency is the main property-based test for
@@ -1940,11 +1875,6 @@ func TestProperty1_ParserRoundTripConsistency_NestedTasks(t *testing.T) {
 		depth := rapid.IntRange(2, 4).Draw(t, "depth")
 
 		var lines []string
-		var expectedTasks []struct {
-			id     string
-			title  string
-			status store.TaskStatus
-		}
 
 		// Build nested structure
 		currentID := ""
@@ -1964,12 +1894,6 @@ func TestProperty1_ParserRoundTripConsistency_NestedTasks(t *testing.T) {
 
 			line := fmt.Sprintf("%s- [%s] %s %s", indent, checkboxChar, currentID, title)
 			lines = append(lines, line)
-
-			expectedTasks = append(expectedTasks, struct {
-				id     string
-				title  string
-				status store.TaskStatus
-			}{currentID, title, status})
 		}
 
 		content := strings.Join(lines, "\n")
@@ -2021,11 +1945,9 @@ func TestProperty1_ParserRoundTripConsistency_WithDescriptions(t *testing.T) {
 		var lines []string
 		lines = append(lines, fmt.Sprintf("- [%s] %s %s", checkboxChar, taskID, title))
 
-		var expectedDescs []string
 		for i := 0; i < numDesc; i++ {
 			descLine := genDescriptionLine(0).Draw(t, fmt.Sprintf("desc_%d", i))
 			lines = append(lines, descLine)
-			expectedDescs = append(expectedDescs, descLine)
 		}
 
 		content := strings.Join(lines, "\n")

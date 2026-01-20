@@ -378,7 +378,8 @@ func TestTaskStore_RWLock_ReadLock(t *testing.T) {
 	store.RLock()
 	store.RLock()
 
-	// Both should succeed without deadlock
+	// Both should succeed without deadlock - access document to verify lock held
+	_ = store.Document
 	store.RUnlock()
 	store.RUnlock()
 }
@@ -388,6 +389,8 @@ func TestTaskStore_RWLock_WriteLock(t *testing.T) {
 
 	// Test that write lock can be acquired and released
 	store.Lock()
+	// Access document to verify lock held
+	_ = store.Document
 	store.Unlock()
 }
 

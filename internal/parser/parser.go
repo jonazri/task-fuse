@@ -116,11 +116,7 @@ func (p *Parser) ValidateTaskID(id string) bool {
 
 	// Check maximum depth (count dots + 1 = number of levels)
 	segments := strings.Split(id, ".")
-	if len(segments) > MaxTaskIDDepth {
-		return false
-	}
-
-	return true
+	return len(segments) <= MaxTaskIDDepth
 }
 
 // ExtractTaskID extracts the numeric task ID from a task line.
@@ -371,7 +367,7 @@ type ParseResult struct {
 // Returns the title portion after the ID.
 func (p *Parser) extractTitleFromLine(line string) string {
 	matches := taskIDExtractionRegex.FindStringSubmatch(line)
-	if matches == nil || len(matches) < 3 {
+	if len(matches) < 3 {
 		return ""
 	}
 	return matches[2]
@@ -568,9 +564,8 @@ func (p *Parser) resolveOrphanedTasks(rootTasks []*store.Task, allTasks []*store
 		// The expected parent ID is the second-to-last prefix
 		expectedParentID := prefixes[len(prefixes)-2]
 
-		// Check if the expected parent exists
-		if _, exists := taskByID[expectedParentID]; exists {
-			// Parent exists - not orphaned
+		// Check if the expected parent exists - if so, not orphaned
+		if taskByID[expectedParentID] != nil {
 			continue
 		}
 

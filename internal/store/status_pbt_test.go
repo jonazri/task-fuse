@@ -66,19 +66,6 @@ func genChildStatuses() *rapid.Generator[[]TaskStatus] {
 	})
 }
 
-// genLeafTask generates a leaf task (no children) with a random status.
-func genLeafTask(id string) *rapid.Generator[*Task] {
-	return rapid.Custom(func(t *rapid.T) *Task {
-		status := genTaskStatus().Draw(t, "leafStatus")
-		return &Task{
-			ID:       id,
-			Title:    fmt.Sprintf("Leaf Task %s", id),
-			Status:   status,
-			Children: nil,
-		}
-	})
-}
-
 // genParentTaskWithChildren generates a parent task with the given child statuses.
 func genParentTaskWithChildren(id string, childStatuses []TaskStatus) *Task {
 	children := make([]*Task, len(childStatuses))

@@ -1011,7 +1011,7 @@ func (ig *testIndexGenerator) generateRootIndex() string {
 
 func (ig *testIndexGenerator) generateStatusIndex(status TaskStatus) string {
 	tasks := ig.getTasksByStatus(status)
-	title := strings.Title(string(status))
+	title := capitalizeFirst(string(status))
 
 	var content strings.Builder
 	content.WriteString(fmt.Sprintf("# %s Tasks\n\n", title))
@@ -1286,7 +1286,7 @@ func TestProperty7_IndexFileCompleteness_StatusIndex(t *testing.T) {
 				}
 
 				// Property 2: Content should contain the status name in title
-				expectedTitle := strings.Title(string(targetStatus)) + " Tasks"
+				expectedTitle := capitalizeFirst(string(targetStatus)) + " Tasks"
 				if !strings.Contains(content, expectedTitle) {
 					t.Fatalf("Status index should contain title %q", expectedTitle)
 				}
@@ -2190,4 +2190,13 @@ func TestProperty12_StatusTransitionEnforcement_LeafTaskAllowed(t *testing.T) {
 				task.ID, destStatus)
 		}
 	})
+}
+
+// capitalizeFirst capitalizes the first letter of a string.
+// This is a simple replacement for strings.Title which is deprecated.
+func capitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
