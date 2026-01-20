@@ -1,0 +1,21 @@
+# 2026/01/20 01:23:46.820882 [TestProperty14_FilenameCollisionResolution_DirectoryNames] [rapid] draw depth: 1
+# 2026/01/20 01:23:46.820891 [TestProperty14_FilenameCollisionResolution_DirectoryNames] [rapid] draw segment_0: 1
+# 2026/01/20 01:23:46.820899 [TestProperty14_FilenameCollisionResolution_DirectoryNames] [rapid] draw slug: "md"
+# 2026/01/20 01:23:46.820903 [TestProperty14_FilenameCollisionResolution_DirectoryNames] ResolveCollision("1.md") = "1-2.md", expected "1.md-2" for directory name
+# 
+v0.4.8#12335264496310718505
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x9867f1f40f739
+0xc
+0x5555555555555
+0x0
+0x38e38e38e38e4
+0x3
+0x0

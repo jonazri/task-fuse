@@ -1,0 +1,22 @@
+# 2026/01/20 09:41:28.186534 [TestProperty8_SyncContentIntegrity_RoundTrip] [rapid] draw taskCount: 1
+# 2026/01/20 09:41:28.186537 [TestProperty8_SyncContentIntegrity_RoundTrip] [rapid] draw task_0: &store.Task{FileLine:store.FileLine{LineNumber:0, RawContent:"", IndentLevel:0}, ID:"1", Title:"a", Status:"pending", Description:[]store.FileLine{}, Children:[]*store.Task(nil), Parent:(*store.Task)(nil)}
+# 2026/01/20 09:41:28.186541 [TestProperty8_SyncContentIntegrity_RoundTrip] Expected 1 tasks, got 0
+# 
+v0.4.8#8072814957752632995
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

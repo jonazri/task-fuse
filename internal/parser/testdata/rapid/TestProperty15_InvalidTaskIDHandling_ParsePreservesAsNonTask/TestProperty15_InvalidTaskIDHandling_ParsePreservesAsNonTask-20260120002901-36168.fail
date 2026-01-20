@@ -1,0 +1,54 @@
+# 2026/01/20 00:29:01.559334 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw validIndent: ""
+# 2026/01/20 00:29:01.559336 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw validCheckbox: " "
+# 2026/01/20 00:29:01.559337 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw validID: "1"
+# 2026/01/20 00:29:01.559339 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw validTitle: "0"
+# 2026/01/20 00:29:01.559339 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw invalidCheckbox: " "
+# 2026/01/20 00:29:01.559340 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw invalidID: "1."
+# 2026/01/20 00:29:01.559341 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] [rapid] draw invalidTitle: "0"
+# 2026/01/20 00:29:01.559343 [TestProperty15_InvalidTaskIDHandling_ParsePreservesAsNonTask] Parse("- [ ] 1 0\n  - [ ] 1. 0") did not preserve invalid ID line "  - [ ] 1. 0" in task description. Description: []
+# 
+v0.4.8#5894555767472230719
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x6b74f03291620
+0x5
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

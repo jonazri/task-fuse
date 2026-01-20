@@ -1,0 +1,21 @@
+# 2026/01/20 09:41:28.188114 [TestProperty8_SyncContentIntegrity_StatusChangeOnly] [rapid] draw task: &store.Task{FileLine:store.FileLine{LineNumber:0, RawContent:"", IndentLevel:0}, ID:"1", Title:"a", Status:"pending", Description:[]store.FileLine{}, Children:[]*store.Task(nil), Parent:(*store.Task)(nil)}
+# 2026/01/20 09:41:28.188264 [TestProperty8_SyncContentIntegrity_StatusChangeOnly] [rapid] draw newStatus: "pending"
+# 
+v0.4.8#6122107748549945643
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

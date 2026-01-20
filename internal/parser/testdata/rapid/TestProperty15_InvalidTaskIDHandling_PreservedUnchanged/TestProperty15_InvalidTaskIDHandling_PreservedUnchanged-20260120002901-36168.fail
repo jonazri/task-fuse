@@ -1,0 +1,50 @@
+# 2026/01/20 00:29:01.621164 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] [rapid] draw validCheckbox: " "
+# 2026/01/20 00:29:01.621169 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] [rapid] draw validID: "1"
+# 2026/01/20 00:29:01.621170 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] [rapid] draw validTitle: "0"
+# 2026/01/20 00:29:01.621171 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] [rapid] draw invalidCheckbox: " "
+# 2026/01/20 00:29:01.621172 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] [rapid] draw invalidID: "1."
+# 2026/01/20 00:29:01.621173 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] [rapid] draw invalidTitle: "0"
+# 2026/01/20 00:29:01.621175 [TestProperty15_InvalidTaskIDHandling_PreservedUnchanged] Invalid ID line was not preserved exactly. Expected "  - [ ] 1. 0" in description, got: []
+# 
+v0.4.8#969853855066915648
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x6b74f03291620
+0x5
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

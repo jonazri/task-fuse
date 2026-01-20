@@ -1,0 +1,29 @@
+# 2026/01/20 00:29:01.539984 [TestProperty15_InvalidTaskIDHandling_ExtractTaskID] [rapid] draw taskLine: struct { Line string; InvalidID string }{Line:"- [ ] 1. 0", InvalidID:"1."}
+# 2026/01/20 00:29:01.540044 [TestProperty15_InvalidTaskIDHandling_ExtractTaskID] ExtractTaskID("1. 0") returned ok=true, expected ok=false for invalid ID format in line "- [ ] 1. 0"
+# 
+v0.4.8#5423924430647048710
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x6b74f03291620
+0x5
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
