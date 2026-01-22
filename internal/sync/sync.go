@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -638,20 +639,40 @@ func (s *SyncEngine) SyncToFile() error {
 	// Serialize the document
 	content := s.printer.Serialize(doc)
 
-	// Write to temporary file
-	tempFile := s.tasksFile + ".tmp"
-	err := os.WriteFile(tempFile, []byte(content), 0644)
+	// Write to temporary file using os.CreateTemp to prevent symlink attacks.
+	// Creating the temp file in the same directory as the target ensures
+	// the atomic rename will work (same filesystem requirement).
+	dir := filepath.Dir(s.tasksFile)
+	tempFile, err := os.CreateTemp(dir, ".tasks-*.tmp")
 	if err != nil {
+		return err
+	}
+	tempFilePath := tempFile.Name()
+
+	// Write content to temp file
+	_, err = tempFile.Write([]byte(content))
+	if closeErr := tempFile.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		// Clean up temp file on write failure
+		os.Remove(tempFilePath)
+		return err
+	}
+
+	// Set proper permissions (CreateTemp creates with 0600)
+	if err := os.Chmod(tempFilePath, 0644); err != nil {
+		os.Remove(tempFilePath)
 		return err
 	}
 
 	// Atomic rename
-	err = os.Rename(tempFile, s.tasksFile)
+	err = os.Rename(tempFilePath, s.tasksFile)
 	if err != nil {
 		// Clean up temp file on failure
-		if removeErr := os.Remove(tempFile); removeErr != nil {
+		if removeErr := os.Remove(tempFilePath); removeErr != nil {
 			slog.Error("failed to remove temp file after rename failure",
-				"temp_file", tempFile,
+				"temp_file", tempFilePath,
 				"rename_error", err,
 				"remove_error", removeErr)
 		}
